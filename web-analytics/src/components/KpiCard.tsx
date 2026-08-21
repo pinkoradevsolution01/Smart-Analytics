@@ -1,0 +1,2 @@
+import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+export function KpiCard({ label, value, change, tone = 'normal' }: { label: string; value: string; change?: string; tone?: 'normal' | 'warning' }) { const up = !change?.startsWith('-'); return <article className={`kpi ${tone}`}><p>{label}</p><strong>{value}</strong>{change && <span className={up ? 'up' : 'down'}>{up ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>} {change} vs prior period</span>}</article>; }

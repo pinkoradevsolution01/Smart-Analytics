@@ -1,0 +1,4 @@
+web-analytics/node_modules/
+web-analytics/dist/
+web-analytics/.env
+*.tsbuildinfo
