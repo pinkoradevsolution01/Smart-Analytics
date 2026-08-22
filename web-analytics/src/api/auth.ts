@@ -27,7 +27,7 @@ export async function signIn(email: string, password: string): Promise<string> {
  * Sends the user through Smart Monitoring's existing Google OAuth entry point.
  * The backend must allow-list returnTo and redirect there with a one-time code.
  */
-export function startGoogleSignIn(returnTo: string): void {
+export function startGoogleSignIn(): void {
   if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
     sessionStorage.setItem('analytics_token', 'development-session');
     window.location.assign('/');
@@ -49,7 +49,7 @@ export async function completeGoogleSignIn(code: string): Promise<string> {
   const response = await fetch(configuredUrl || `${base}/auth/google/exchange`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, client: 'web-analytics' }),
+    body: JSON.stringify({ code }),
   });
   return readToken(response, 'Google sign-in could not be completed. Please try again.');
 }
