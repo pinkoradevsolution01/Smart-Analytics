@@ -25,7 +25,6 @@ export async function signIn(email: string, password: string): Promise<string> {
 
 /**
  * Sends the user through Smart Monitoring's existing Google OAuth entry point.
- * The backend must allow-list returnTo and redirect there with a one-time code.
  */
 export function startGoogleSignIn(): void {
   if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
@@ -36,8 +35,6 @@ export function startGoogleSignIn(): void {
   const configuredUrl = import.meta.env.VITE_GOOGLE_AUTH_START_URL;
   if (!configuredUrl && !base) throw new Error('The dashboard API URL has not been configured.');
   const url = new URL(configuredUrl || `${base}/auth/google`);
-  url.searchParams.set('returnTo', returnTo);
-  url.searchParams.set('client', 'web-analytics');
   window.location.assign(url.toString());
 }
 
