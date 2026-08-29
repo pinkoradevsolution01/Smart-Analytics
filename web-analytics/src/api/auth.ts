@@ -1,6 +1,7 @@
 const base = import.meta.env.VITE_API_BASE_URL;
 
-type TokenResponse = { data?: { token?: string; accessToken?: string }; token?: string; accessToken?: string };
+type AuthUser = { fullName?: string; email?: string };
+type TokenResponse = { data?: { token?: string; accessToken?: string; user?: AuthUser }; token?: string; accessToken?: string; user?: AuthUser };
 
 function tokenFrom(body: TokenResponse): string | undefined {
   const payload = body.data ?? body;
@@ -12,6 +13,9 @@ async function readToken(response: Response, fallbackMessage: string): Promise<s
   if (!response.ok) throw new Error(body.message || fallbackMessage);
   const token = tokenFrom(body);
   if (!token) throw new Error('The API did not return an access token.');
+  const user = body.user ?? body.data?.user;
+  if (user?.fullName) sessionStorage.setItem('analytics_user_full_name', user.fullName);
+  if (user?.email) sessionStorage.setItem('analytics_user_email', user.email);
   return token;
 }
 
