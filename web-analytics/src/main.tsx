@@ -6,6 +6,7 @@ import App from './App';
 import './styles.css';
 import './details.css';
 import './theme.css';
+import './export.css';
 
 const storedTheme = localStorage.getItem('analytics_theme');
 if (storedTheme) document.documentElement.style.setProperty('--theme-primary', storedTheme);

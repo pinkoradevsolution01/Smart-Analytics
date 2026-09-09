@@ -1,0 +1,11 @@
+.export:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.export-error {
+  margin: 6px 0 0;
+  color: #aa4e46;
+  font-size: 12px;
+  max-width: 560px;
+}

@@ -14,7 +14,34 @@ Set `VITE_USE_MOCK_DATA=true` only for local UI development. The mock uses the `
 
 The production API must provide the protected analytics routes in the build specification. The client sends the current session token as `Authorization: Bearer <token>`, but all role and business scoping must be derived from the verified JWT by the server. Never trust browser query parameters or client storage for tenant scope.
 
-The current UI has a development-only login interaction so it can be previewed before the existing backend is available. Replace that handler with `POST /auth/login` plus `GET /auth/me` session restoration when mounting this project beside the source backend.
+The dashboard sends the JWT returned by `POST /auth/login` or the Google exchange as `Authorization: Bearer <token>` on every analytics request. The server, not the browser, derives the business scope from the verified token. A `401` or `403` removes the dashboard token and requires a new sign-in.
+
+## CSV exports
+
+The **Export CSV** control downloads the report for the current page and selected date range through `GET /api/analytics/export`. It sends the same bearer token as the on-screen report, and the browser does not provide a business ID. Supported reports are `overview`, `sales`, `inventory`, `customers`, `operations`, and `cctv-events`.
+
+## Production configuration
+
+Configure these values in Vercel for `analytics.smartmonitoringsystem.store`:
+
+```env
+VITE_API_BASE_URL=https://api.smartmonitoringsystem.store/api
+VITE_USE_MOCK_DATA=false
+```
+
+Configure these values in the Node.js backend environment, then restart the backend:
+
+```env
+NODE_ENV=production
+CORS_ORIGINS=https://analytics.smartmonitoringsystem.store
+WEB_ANALYTICS_URL=https://analytics.smartmonitoringsystem.store
+GOOGLE_CALLBACK_URL=https://api.smartmonitoringsystem.store/api/auth/google/callback
+GOOGLE_CLIENT_ID=<Google OAuth web client ID>
+GOOGLE_CLIENT_SECRET=<Google OAuth web client secret>
+JWT_SECRET=<long-random-private-secret>
+```
+
+In Google Cloud Console, the authorized redirect URI must be exactly `https://api.smartmonitoringsystem.store/api/auth/google/callback`. The Vercel site callback is `https://analytics.smartmonitoringsystem.store/auth/google/callback`; it receives only a short-lived single-use code, never the JWT.
 
 ## Shared Google sign-in
 
