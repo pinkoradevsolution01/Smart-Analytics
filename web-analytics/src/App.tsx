@@ -2,26 +2,38 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Bell, CalendarDays, ChevronDown, Cloud, CloudOff, Download, LayoutDashboard, Menu, Package, RefreshCw, ScanLine, Settings, ShoppingBag, Users, Wrench, X, LogOut } from 'lucide-react';
-import { downloadAnalyticsCsv, getAnalyticsDetail, getOverview, type ExportReport, type Overview, type Range } from './api/analytics';
+import { Bell, CalendarDays, ChevronDown, Cloud, CloudOff, Download, LayoutDashboard, Menu, Package, RefreshCw, ScanLine, Settings, ShoppingBag, Truck, Users, Wrench, X, LogOut } from 'lucide-react';
+import { downloadAnalyticsCsv, getAnalyticsDetail, getOverview, getSmartPlusNotifications, type ExportReport, type Overview, type Range } from './api/analytics';
 import { KpiCard } from './components/KpiCard';
 import { DateRangePicker } from './components/DateRangePicker';
 import { completeGoogleSignIn, signIn, startGoogleSignIn } from './api/auth';
 
-const nav = [{to:'/',label:'Overview',icon:LayoutDashboard},{to:'/sales',label:'Sales',icon:ShoppingBag},{to:'/inventory',label:'Inventory',icon:Package},{to:'/customers',label:'Customers',icon:Users},{to:'/operations',label:'Operations',icon:Wrench},{to:'/cctv-events',label:'CCTV Events',icon:ScanLine}];
+const nav = [{to:'/',label:'Overview',icon:LayoutDashboard},{to:'/sales',label:'Sales',icon:ShoppingBag},{to:'/inventory',label:'Inventory',icon:Package},{to:'/customers',label:'Customers',icon:Users},{to:'/suppliers',label:'Suppliers',icon:Truck},{to:'/operations',label:'Operations',icon:Wrench},{to:'/cctv-events',label:'CCTV Events',icon:ScanLine}];
 // Match the Flutter application's shared Philippine-peso display format.
 const peso = new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:2,maximumFractionDigits:2});
 function Sidebar({open,setOpen,businessName}:{open:boolean;setOpen:(v:boolean)=>void;businessName:string}) { return <aside className={open?'sidebar open':'sidebar'}><div className="brand"><img className="brand-logo" src="/brand-logo.png" alt="Smart Monitoring Analytics"/><span>Smart<span>Monitor</span></span><button className="close" onClick={()=>setOpen(false)}><X size={20}/></button></div><div className="workspace"><small>WORKSPACE</small><button>{businessName}<ChevronDown size={15}/></button></div><nav>{nav.map(({to,label,icon:Icon})=><NavLink end={to==='/' } to={to} key={to} onClick={()=>setOpen(false)}><Icon size={19}/>{label}</NavLink>)}</nav><div className="sidebar-bottom"><NavLink to="/settings"><Settings size={19}/>Settings</NavLink><button onClick={()=>{sessionStorage.removeItem('analytics_token');sessionStorage.removeItem('analytics_user_full_name');sessionStorage.removeItem('analytics_user_email');sessionStorage.removeItem('analytics_business_name');location.href='/login';}}><LogOut size={19}/>Log out</button><div className="sync-note"><span></span><div><b>Synced data</b><small>Updates after Flutter sync</small></div></div></div></aside> }
 function Header({onMenu,range,setRange,refreshing}:{onMenu:()=>void;range:Range;setRange:(r:Range)=>void;refreshing:boolean}) {
   const userName=sessionStorage.getItem('analytics_user_full_name')||sessionStorage.getItem('analytics_user_email')||'Smart Monitoring user';
   const initials=userName.split(/\s+|@/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'SM';
+  const [notificationsOpen,setNotificationsOpen]=useState(false);
+  const notifications=useQuery({queryKey:['smartplus-notifications'],queryFn:getSmartPlusNotifications,staleTime:30_000});
+  const notificationError=notifications.error instanceof Error?notifications.error.message:'Unable to load SmartPlus suggestions.';
   return <header>
     <button className="hamburger" onClick={onMenu} aria-label="Open navigation"><Menu/></button>
     <div className="headline"><p>Good morning, {userName}</p><h1>Business overview</h1></div>
     <div className="header-actions">
       <DateRangePicker range={range} onChange={setRange}/>
       <button className="refresh" title="Refresh data" aria-label="Refresh data" onClick={()=>setRange({...range})}><RefreshCw className={refreshing?'spin':''} size={18}/></button>
-      <button className="notification" aria-label="Notifications"><Bell size={19}/><i/></button>
+      <div className="notification-wrap">
+        <button className="notification" aria-label="SmartPlus notifications" aria-expanded={notificationsOpen} onClick={()=>setNotificationsOpen(value=>!value)}><Bell size={19}/>{(notifications.data?.unreadCount||0)>0&&<i/>}</button>
+        {notificationsOpen&&<section className="notification-menu" aria-label="SmartPlus suggestions">
+          <div><strong>SmartPlus suggestions</strong><small>For your business only</small></div>
+          {notifications.isLoading&&<p>Loading suggestions…</p>}
+          {notifications.isError&&<p className="notification-error">{notificationError}</p>}
+          {!notifications.isLoading&&!notifications.isError&&!(notifications.data?.notifications.length)&&<p>No active SmartPlus suggestions.</p>}
+          {notifications.data?.notifications.map(item=><article key={item.id}><span className={`notification-status ${item.status}`}></span><div><b>{item.title}</b><small>{item.actionType.replace(/_/g,' ')} · {new Date(String(item.createdAt).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})}</small></div><em>{item.status}</em></article>)}
+        </section>}
+      </div>
       <div className="avatar" title={userName}>{initials}</div>
     </div>
   </header>
@@ -53,6 +65,7 @@ const details: Record<string, { description: string; metrics: [string, string][]
   '/sales': { description: 'Completed sales only · filters are applied by the analytics API', metrics: [['Gross sales', '₱142,800'], ['Completed sales', '429'], ['Cancelled', '18'], ['Items per order', '1.9']], columns: ['Transaction', 'Date & time', 'Payment', 'Cashier', 'Total', 'Status'], rows: [['#SM-10429', 'Aug 20, 10:42 AM', 'GCash', 'Maria Santos', '₱1,680', 'Completed'], ['#SM-10428', 'Aug 20, 10:21 AM', 'Cash', 'John Reyes', '₱850', 'Completed'], ['#SM-10427', 'Aug 20, 9:56 AM', 'Card', 'Maria Santos', '₱2,450', 'Completed']] },
   '/inventory': { description: 'Stock status and movement records from the latest central sync', metrics: [['On-hand units', '2,846'], ['Cost value', '₱468,200'], ['Retail value', '₱814,300'], ['Out of stock', '4']], columns: ['Product', 'Category', 'On hand', 'Threshold', 'Cost value', 'Status'], rows: [['Classic Crew Tee — White / M', 'Tops', '3', '10', '₱750', 'Low'], ['Canvas Tote — Natural', 'Accessories', '0', '8', '₱0', 'Out of stock'], ['Linen Shirt — Olive / L', 'Tops', '2', '8', '₱1,100', 'Low']] },
   '/customers': { description: 'Aggregate charts omit PII; detailed records require an authorized role', metrics: [['Active customers', '292'], ['New customers', '47'], ['Repeat rate', '38.4%'], ['Loyalty points issued', '8,460']], columns: ['Customer', 'Joined', 'Orders', 'Loyalty balance', 'Lifetime points', 'Status'], rows: [['Customer #C-1924', 'Aug 19, 2026', '4', '290', '810', 'Active'], ['Customer #C-1876', 'Aug 17, 2026', '2', '120', '340', 'Active'], ['Customer #C-1623', 'Aug 04, 2026', '8', '640', '1,980', 'Active']] },
+  '/suppliers': { description: 'Supplier and purchase-order records from your assigned business', metrics: [['Active suppliers', '—'], ['Purchase orders', '—'], ['Open orders', '—'], ['Ordered value', '—']], columns: ['Supplier', 'Contact', 'Purchase orders', 'Open orders', 'Last order', 'Status'], rows: [] },
   '/operations': { description: 'Attendance, purchasing, supplier, and damage-report activity', metrics: [['Attendance entries', '74'], ['Purchase orders', '12'], ['Supplier activity', '8'], ['Damage reports', '5']], columns: ['Activity', 'Reference', 'Date', 'Owner', 'Amount / Qty', 'Status'], rows: [['Purchase order', 'PO-2026-0820', 'Aug 20, 2026', 'Aurelia Supplies', '₱28,400', 'Received'], ['Damage report', 'DR-2026-0819', 'Aug 19, 2026', 'Maria Santos', '3 units', 'Open'], ['Attendance', 'Clock-in', 'Aug 20, 2026', 'John Reyes', '8:02 AM', 'Recorded']] },
   '/cctv-events': { description: 'Safe camera labels and timestamped event markers only — no streams or credentials', metrics: [['Active cameras', '6'], ['Event markers', '31'], ['Events today', '4'], ['Open reviews', '2']], columns: ['Camera', 'Location', 'Event', 'Timestamp', 'Created by', 'State'], rows: [['Front entrance', 'Main storefront', 'Customer queue observed', 'Aug 20, 10:18 AM', 'Maria Santos', 'Logged'], ['Cashier 1', 'Checkout counter', 'Cash drawer verification', 'Aug 20, 9:04 AM', 'John Reyes', 'Logged'], ['Stockroom', 'Rear storage', 'Delivery received', 'Aug 19, 3:45 PM', 'Maria Santos', 'Logged']] },
   '/settings': { description: 'Business-level reporting preferences', metrics: [['Timezone', 'Asia/Manila'], ['Currency', 'PHP'], ['Refresh policy', 'Manual'], ['Role', 'Owner']], columns: ['Preference', 'Current value', 'Source', 'Updated', 'Scope', 'State'], rows: [['Reporting timezone', 'Asia/Manila', 'Business defaults', 'Aug 01, 2026', 'Business', 'Active'], ['Currency display', 'PHP · en-PH', 'Business defaults', 'Aug 01, 2026', 'Business', 'Active']] }
@@ -68,6 +81,7 @@ function LiveDetailPage({path,range}:{path:string;range:Range}) {
   const payload = query.data as any;
   const rows = path === '/inventory' ? payload?.products || []
     : path === '/customers' ? payload?.customers || []
+    : path === '/suppliers' ? payload?.suppliers || []
     : path === '/operations' ? [...(payload?.attendanceEntries || []).map((item:any)=>({recordType:'Attendance',...item})), ...(payload?.inventoryMovements || []).map((item:any)=>({recordType:'Inventory movement',...item})), ...(payload?.purchaseOrders || []).map((item:any)=>({recordType:'Purchase order',...item})), ...(payload?.damageReports || []).map((item:any)=>({recordType:'Damage report',...item}))]
     : Array.isArray(payload) ? payload : [];
   const columns = rows.length ? Object.keys(rows[0]).filter((key) => !['business_id', 'password', 'password_hash'].includes(key)) : [];

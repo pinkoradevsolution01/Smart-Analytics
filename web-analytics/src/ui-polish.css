@@ -42,6 +42,20 @@ header {
 .period:hover { border-color: #8bcfbd; }
 .refresh, .notification { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; }
 .refresh:hover, .notification:hover { background: rgba(255,255,255,.13); transform: translateY(-1px); }
+.notification-wrap { position: relative; }
+.notification-menu { position: absolute; right: 0; top: calc(100% + 10px); z-index: 20; width: min(360px, calc(100vw - 32px)); max-height: min(440px, calc(100vh - 108px)); overflow: auto; padding: 14px; border: 1px solid #d8e9e1; border-radius: 14px; background: #fff; color: var(--ink); box-shadow: 0 18px 40px rgba(8, 40, 32, .22); }
+.notification-menu > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 1px 2px 10px; border-bottom: 1px solid #e5efea; }
+.notification-menu strong { font-size: 14px; }
+.notification-menu small, .notification-menu > p { color: #6c827a; font-size: 12px; }
+.notification-menu > p { margin: 15px 2px 3px; }
+.notification-menu article { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 9px; align-items: start; padding: 12px 2px; border-bottom: 1px solid #edf3ef; }
+.notification-menu article:last-child { border-bottom: 0; }
+.notification-menu article b { display: block; color: #1c4339; font-size: 12px; line-height: 1.35; }
+.notification-menu article small { display: block; margin-top: 4px; text-transform: capitalize; line-height: 1.35; }
+.notification-menu article em { padding: 3px 6px; border-radius: 999px; background: #e9f6f0; color: #176b59; font-size: 10px; font-style: normal; text-transform: capitalize; }
+.notification-status { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #e2a545; box-shadow: 0 0 0 3px rgba(226, 165, 69, .15); }
+.notification-status.approved { background: #2b9d79; box-shadow: 0 0 0 3px rgba(43, 157, 121, .14); }
+.notification-error { color: #ae4940 !important; }
 .avatar { box-shadow: 0 3px 0 rgba(0,0,0,.16), 0 7px 17px rgba(0,0,0,.18); outline: 2px solid rgba(255,255,255,.36); }
 
 .content {
@@ -97,6 +111,7 @@ td { border-bottom-color: #edf3ef; }
   .content { background: #f4f8f6; }
   .panel:hover, .kpi:hover { transform: none; }
   .detail-intro h2 { font-size: 25px; }
+  .notification-menu { right: -42px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
