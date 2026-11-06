@@ -60,7 +60,8 @@ header {
 .notification-menu article small { display: block; margin-top: 4px; text-transform: capitalize; line-height: 1.35; }
 .notification-menu article em { padding: 3px 6px; border-radius: 999px; background: #e9f6f0; color: #176b59; font-size: 10px; font-style: normal; text-transform: capitalize; }
 .notification-status { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #e2a545; box-shadow: 0 0 0 3px rgba(226, 165, 69, .15); }
-.notification-status.approved { background: #2b9d79; box-shadow: 0 0 0 3px rgba(43, 157, 121, .14); }
+.notification-status.critical { background: #d9473f; box-shadow: 0 0 0 3px rgba(217, 71, 63, .15); }
+.notification-status.info { background: #2b9d79; box-shadow: 0 0 0 3px rgba(43, 157, 121, .14); }
 .notification-error { color: #ae4940 !important; }
 .avatar { box-shadow: 0 3px 0 rgba(0,0,0,.16), 0 7px 17px rgba(0,0,0,.18); outline: 2px solid rgba(255,255,255,.36); }
 

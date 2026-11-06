@@ -22,7 +22,9 @@ export type SmartPlusNotification = {
   source: 'SmartPlus';
   actionType: string;
   title: string;
-  status: 'draft' | 'approved';
+  message: string;
+  level: 'info' | 'warning' | 'critical';
+  status: 'active';
   createdAt: string;
   updatedAt: string;
 };

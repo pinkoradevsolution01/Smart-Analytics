@@ -16,7 +16,7 @@ function Header({onMenu,range,setRange,refreshing}:{onMenu:()=>void;range:Range;
   const userName=sessionStorage.getItem('analytics_user_full_name')||sessionStorage.getItem('analytics_user_email')||'Smart Monitoring user';
   const initials=userName.split(/\s+|@/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'SM';
   const [notificationsOpen,setNotificationsOpen]=useState(false);
-  const notifications=useQuery({queryKey:['smartplus-notifications'],queryFn:getSmartPlusNotifications,staleTime:30_000});
+  const notifications=useQuery({queryKey:['smartplus-notifications'],queryFn:getSmartPlusNotifications,staleTime:15_000,refetchInterval:30_000});
   const notificationError=notifications.error instanceof Error?notifications.error.message:'Unable to load SmartPlus suggestions.';
   return <header>
     <button className="hamburger" onClick={onMenu} aria-label="Open navigation"><Menu/></button>
@@ -31,7 +31,7 @@ function Header({onMenu,range,setRange,refreshing}:{onMenu:()=>void;range:Range;
           {notifications.isLoading&&<p>Loading suggestions…</p>}
           {notifications.isError&&<p className="notification-error">{notificationError}</p>}
           {!notifications.isLoading&&!notifications.isError&&!(notifications.data?.notifications.length)&&<p>No active SmartPlus suggestions.</p>}
-          {notifications.data?.notifications.map(item=><article key={item.id}><span className={`notification-status ${item.status}`}></span><div><b>{item.title}</b><small>{item.actionType.replace(/_/g,' ')} · {new Date(String(item.createdAt).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})}</small></div><em>{item.status}</em></article>)}
+          {notifications.data?.notifications.map(item=><article key={item.id}><span className={`notification-status ${item.level}`}></span><div><b>{item.title}</b><small>{item.message}</small></div><em>{item.level}</em></article>)}
         </section>}
       </div>
       <div className="avatar" title={userName}>{initials}</div>
