@@ -8,6 +8,7 @@ import './details.css';
 import './theme.css';
 import './export.css';
 import './ui-polish.css';
+import './typography.css';
 
 const storedTheme = localStorage.getItem('analytics_theme');
 if (storedTheme) document.documentElement.style.setProperty('--theme-primary', storedTheme);
