@@ -16,7 +16,7 @@ const api = import.meta.env.VITE_API_BASE_URL;
 // Demonstration fixtures must never be available in a Vercel production
 // bundle, even if a deployment environment variable is set incorrectly.
 const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
-export type ExportReport = 'overview' | 'sales' | 'inventory' | 'customers' | 'suppliers' | 'operations' | 'cctv-events';
+export type ExportReport = 'overview' | 'sales' | 'inventory' | 'customers' | 'suppliers' | 'operations';
 export type SmartPlusNotification = {
   id: string;
   source: 'SmartPlus';

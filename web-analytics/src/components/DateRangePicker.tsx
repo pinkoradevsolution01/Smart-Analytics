@@ -135,8 +135,8 @@ export function DateRangePicker({ range, onChange }: DateRangePickerProps) {
       <div className="calendar-navigation">
         <button type="button" aria-label="Previous month" onClick={() => setViewMonth((month) => addMonths(month, -1))}><ChevronLeft size={17} /></button>
         <div className="calendar-selects">
-          <select aria-label="Calendar month" value={viewMonth.getMonth()} onChange={(event) => setViewMonth(new Date(viewMonth.getFullYear(), Number(event.target.value), 1))}>{Array.from({ length: 12 }, (_, month) => <option key={month} value={month}>{new Date(2026, month, 1).toLocaleDateString('en-PH', { month: 'long' })}</option>)}</select>
-          <select aria-label="Calendar year" value={viewMonth.getFullYear()} onChange={(event) => setViewMonth(new Date(Number(event.target.value), viewMonth.getMonth(), 1))}>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select>
+          <select id="analytics-calendar-month" name="calendarMonth" aria-label="Calendar month" value={viewMonth.getMonth()} onChange={(event) => setViewMonth(new Date(viewMonth.getFullYear(), Number(event.target.value), 1))}>{Array.from({ length: 12 }, (_, month) => <option key={month} value={month}>{new Date(2026, month, 1).toLocaleDateString('en-PH', { month: 'long' })}</option>)}</select>
+          <select id="analytics-calendar-year" name="calendarYear" aria-label="Calendar year" value={viewMonth.getFullYear()} onChange={(event) => setViewMonth(new Date(Number(event.target.value), viewMonth.getMonth(), 1))}>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select>
         </div>
         <button type="button" aria-label="Next month" onClick={() => setViewMonth((month) => addMonths(month, 1))}><ChevronRight size={17} /></button>
       </div>
