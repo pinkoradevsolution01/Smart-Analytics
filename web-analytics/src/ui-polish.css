@@ -21,10 +21,16 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .workspace button { border-radius: 11px; padding: 11px 12px; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
 .workspace button:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--theme-primary) 54%, white); border-color: rgba(255,255,255,.36); }
 nav { gap: 5px; }
-nav a { position: relative; overflow: hidden; min-height: 42px; }
+nav a { position: relative; overflow: hidden; min-height: 44px; color: rgba(246, 252, 249, .82); font-size: 13px; font-weight: 600; border: 1px solid transparent; }
 nav a::before { content: ''; position: absolute; left: 0; width: 3px; height: 20px; border-radius: 0 4px 4px 0; background: #9fe1b2; transform: scaleY(0); transition: transform .18s ease; }
 nav a.active::before { transform: scaleY(1); }
-nav a:hover { transform: translateX(2px); }
+nav a svg { color: rgba(196, 232, 219, .88); }
+nav a.active { background: linear-gradient(100deg, rgba(255,255,255,.22), rgba(154, 225, 190, .13)); color: #fff; border-color: rgba(194, 241, 217, .28); box-shadow: 0 8px 18px rgba(0,0,0,.16); }
+nav a.active svg { color: #b7f2cf; }
+nav a:hover { transform: translateX(2px); background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.12); }
+nav a:hover svg { color: #d8ffea; }
+.sidebar-bottom a, .sidebar-bottom button { color: rgba(246, 252, 249, .8); font-weight: 600; border: 1px solid transparent; }
+.sidebar-bottom a svg, .sidebar-bottom button svg { color: rgba(196, 232, 219, .88); }
 .sidebar-bottom a:hover, .sidebar-bottom button:hover { background: rgba(255,255,255,.09); color: #fff; }
 .sync-note { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); border-radius: 12px; margin: 18px 2px 0; padding: 12px; }
 .sync-note > span { box-shadow: 0 0 0 4px rgba(139,207,128,.12); }
