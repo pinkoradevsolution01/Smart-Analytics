@@ -143,12 +143,14 @@ td { border-bottom-color: #edf3ef; }
   overflow: hidden;
   opacity: 0;
   background: url('/retail-panels.png') center / cover no-repeat;
-  clip-path: circle(0 at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%));
-  transition: clip-path .55s cubic-bezier(.2,.75,.25,1), opacity .25s ease;
+  filter: saturate(1.05) brightness(1.05) blur(1.5px);
+  -webkit-mask-image: radial-gradient(ellipse 350px 270px at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%), #000 0%, rgba(0,0,0,.88) 31%, rgba(0,0,0,.36) 56%, transparent 82%);
+  mask-image: radial-gradient(ellipse 350px 270px at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%), #000 0%, rgba(0,0,0,.88) 31%, rgba(0,0,0,.36) 56%, transparent 82%);
+  transition: opacity .32s ease, filter .4s ease;
 }
 .login-retail.is-revealing .login-background-reveal {
-  opacity: .94;
-  clip-path: circle(220px at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%));
+  opacity: .9;
+  filter: saturate(1.05) brightness(1.06) blur(.6px);
 }
 .login-background-reveal::after {
   content: '';
@@ -164,6 +166,17 @@ td { border-bottom-color: #edf3ef; }
   z-index: 3;
   backdrop-filter: blur(9px);
   background: rgba(255,255,255,.94);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.login-retail > .login-card .brand-logo {
+  margin-inline: auto;
+}
+.login-retail > .login-card .login-error {
+  align-self: stretch;
+  text-align: left;
 }
 @keyframes login-retail-pan {
   from { transform: scale(1.05) translate3d(-1.2%, -.8%, 0); }
