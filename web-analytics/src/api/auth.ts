@@ -1,7 +1,22 @@
 const base = import.meta.env.VITE_API_BASE_URL;
+const useMockData = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
+const configuredCallbackUri = import.meta.env.VITE_GOOGLE_OAUTH_REDIRECT_URI;
 
 type AuthUser = { fullName?: string; email?: string };
 type TokenResponse = { data?: { token?: string; accessToken?: string; user?: AuthUser }; token?: string; accessToken?: string; user?: AuthUser };
+
+function assertCallbackMatchesDeployedSite(): void {
+  if (!import.meta.env.PROD || !configuredCallbackUri) return;
+  let callbackOrigin: string;
+  try {
+    callbackOrigin = new URL(configuredCallbackUri).origin;
+  } catch {
+    throw new Error('The Analytics Google callback URL is invalid. Contact the system administrator.');
+  }
+  if (callbackOrigin !== window.location.origin) {
+    throw new Error('The Analytics Google callback URL does not match this deployed site. Contact the system administrator.');
+  }
+}
 
 function tokenFrom(body: TokenResponse): string | undefined {
   const payload = body.data ?? body;
@@ -21,7 +36,7 @@ async function readToken(response: Response, fallbackMessage: string): Promise<s
 
 /** Authenticates against the existing Smart Monitoring account endpoint. */
 export async function signIn(email: string, password: string): Promise<string> {
-  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') return 'development-session';
+  if (useMockData) return 'development-session';
   if (!base) throw new Error('The dashboard API URL has not been configured.');
   const response = await fetch(`${base}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
   return readToken(response, 'Sign-in failed. Check your email and password.');
@@ -31,11 +46,12 @@ export async function signIn(email: string, password: string): Promise<string> {
  * Sends the user through Smart Monitoring's existing Google OAuth entry point.
  */
 export function startGoogleSignIn(): void {
-  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
+  if (useMockData) {
     sessionStorage.setItem('analytics_token', 'development-session');
     window.location.assign('/');
     return;
   }
+  assertCallbackMatchesDeployedSite();
   const configuredUrl = import.meta.env.VITE_GOOGLE_AUTH_START_URL;
   if (!configuredUrl && !base) throw new Error('The dashboard API URL has not been configured.');
   const url = new URL(configuredUrl || `${base}/auth/google`);
@@ -44,7 +60,8 @@ export function startGoogleSignIn(): void {
 
 /** Exchanges the one-time Google callback code for the shared API JWT. */
 export async function completeGoogleSignIn(code: string): Promise<string> {
-  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') return 'development-session';
+  if (useMockData) return 'development-session';
+  assertCallbackMatchesDeployedSite();
   const configuredUrl = import.meta.env.VITE_GOOGLE_AUTH_EXCHANGE_URL;
   if (!configuredUrl && !base) throw new Error('The dashboard API URL has not been configured.');
   const response = await fetch(configuredUrl || `${base}/auth/google/exchange`, {
