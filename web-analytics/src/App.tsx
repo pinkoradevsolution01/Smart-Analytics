@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type PointerEvent, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -105,6 +105,25 @@ function Dashboard() {
   };
   return <div className="app"><Sidebar open={open} setOpen={setOpen} businessName={q.data?.meta.businessName || sessionStorage.getItem('analytics_business_name') || 'Your business'}/><main><Header onMenu={()=>setOpen(true)} range={range} setRange={setRange} refreshing={q.isFetching}/><div className="content"><div className="content-top"><div><span className="eyebrow">{location.pathname==='/'?'REPORTING · LAST 30 DAYS':'ANALYTICS'}</span>{location.pathname==='/'&&<p className="sync">Centralized data · Last refreshed {q.data ? new Date(q.data.meta.generatedAt).toLocaleTimeString('en-PH',{hour:'numeric',minute:'2-digit'}) : '—'} · Asia/Manila</p>}{exportError&&<p className="export-error" role="alert">{exportError}</p>}</div><button className="export" onClick={download} disabled={exporting}><Download size={16}/>{exporting?'Preparing CSV...':'Export CSV'}</button></div>{q.isLoading&&<div className="state">Loading your operational data…</div>}{q.isError&&<div className="state error">{q.error.message} <button onClick={()=>q.refetch()}>Try again</button></div>}{location.pathname==='/'&&q.data&&<OverviewPage data={q.data}/>} {location.pathname!=='/'&&<LiveDetailPage path={location.pathname} range={range}/>}</div></main></div>
 }
-function Login(){const [error,setError]=useState('');const [googleLoading,setGoogleLoading]=useState(false);const googleLogin=()=>{setError('');setGoogleLoading(true);try{startGoogleSignIn()}catch(reason){setGoogleLoading(false);setError(reason instanceof Error?reason.message:'Unable to start Google sign-in.')}};return <div className="login"><div><img className="brand-logo" src="/brand-logo.png" alt="Smart Monitoring Analytics"/><h1>Welcome back</h1><p>Sign in with your authorized Smart Monitoring Google account to access your business analytics.</p><button type="button" className="google-button" onClick={googleLogin} disabled={googleLoading}><span className="google-g" aria-hidden="true">G</span>{googleLoading?'Opening Google...':'Continue with Google'}</button>{error&&<p className="login-error" role="alert">{error}</p>}<small>Your data is scoped to your assigned business.</small></div></div>}
+function Login(){
+  const [error,setError]=useState('');
+  const [googleLoading,setGoogleLoading]=useState(false);
+  const loginSurfaceRef=useRef<HTMLDivElement>(null);
+  const googleLogin=()=>{setError('');setGoogleLoading(true);try{startGoogleSignIn()}catch(reason){setGoogleLoading(false);setError(reason instanceof Error?reason.message:'Unable to start Google sign-in.')}};
+  const revealBackground=(event:PointerEvent<HTMLDivElement>)=>{
+    if(event.pointerType!=='mouse') return;
+    const surface=loginSurfaceRef.current;
+    if(!surface) return;
+    const bounds=surface.getBoundingClientRect();
+    surface.style.setProperty('--login-pointer-x',`${event.clientX-bounds.left}px`);
+    surface.style.setProperty('--login-pointer-y',`${event.clientY-bounds.top}px`);
+    surface.classList.add('is-revealing');
+  };
+  const hideBackgroundReveal=()=>loginSurfaceRef.current?.classList.remove('is-revealing');
+  return <div ref={loginSurfaceRef} className="login login-retail" onPointerMove={revealBackground} onPointerLeave={hideBackgroundReveal}>
+    <span className="login-background-reveal" aria-hidden="true"/>
+    <div className="login-card"><img className="brand-logo" src="/brand-logo.png" alt="Smart Monitoring Analytics"/><h1>Welcome back</h1><p>Sign in with your authorized Smart Monitoring Google account to access your business analytics.</p><button type="button" className="google-button" onClick={googleLogin} disabled={googleLoading}><span className="google-g" aria-hidden="true">G</span>{googleLoading?'Opening Google...':'Continue with Google'}</button>{error&&<p className="login-error" role="alert">{error}</p>}<small>Your data is scoped to your assigned business.</small></div>
+  </div>
+}
 function GoogleCallback(){const navigate=useNavigate();const location=useLocation();const [error,setError]=useState('');const started=useRef(false);useEffect(()=>{if(started.current)return;started.current=true;const params=new URLSearchParams(location.search);const code=params.get('code');const providerError=params.get('error_description')||params.get('error');if(providerError){setError(providerError);return}if(!code){setError('Google sign-in did not return a completion code. Please try again.');return}(async()=>{try{const token=await completeGoogleSignIn(code);sessionStorage.setItem('analytics_token',token);navigate('/',{replace:true})}catch(reason){setError(reason instanceof Error?reason.message:'Google sign-in could not be completed.')}})()},[location.search,navigate]);return <div className="login"><div><img className="brand-logo" src="/brand-logo.png" alt="Smart Monitoring Analytics"/><h1>Signing you in</h1>{error?<><p className="login-error">{error}</p><button className="login-link" onClick={()=>navigate('/login',{replace:true})}>Return to sign in</button></>:<p>We are securely confirming your Smart Monitoring account.</p>}</div></div>}
 export default function App(){return <Routes><Route path="/login" element={<Login/>}/><Route path="/auth/google/callback" element={<GoogleCallback/>}/><Route path="/cctv-events" element={<Navigate to="/" replace/>}/><Route path="/*" element={<Dashboard/>}/><Route path="*" element={<Navigate to="/"/>}/></Routes>}

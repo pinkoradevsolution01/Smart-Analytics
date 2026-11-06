@@ -111,6 +111,70 @@ td { border-bottom-color: #edf3ef; }
 .google-button { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
 .google-button:hover { transform: translateY(-1px); border-color: #81bfb0; box-shadow: 0 8px 17px rgba(18,62,54,.10); }
 
+/* Retail login background: the supplied image drifts slowly, then reveals a
+   brighter panel beneath the mouse with a restrained ripple treatment. */
+.login-retail {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #0b2923;
+}
+.login-retail::before,
+.login-retail::after,
+.login-background-reveal {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+}
+.login-retail::before {
+  z-index: 0;
+  inset: -4%;
+  background: url('/retail-panels.png') center / cover no-repeat;
+  filter: saturate(.82) brightness(.58);
+  animation: login-retail-pan 26s ease-in-out infinite alternate;
+}
+.login-retail::after {
+  z-index: 1;
+  background: linear-gradient(120deg, rgba(4, 28, 24, .80), rgba(6, 48, 39, .58) 46%, rgba(7, 31, 27, .74));
+}
+.login-background-reveal {
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0;
+  background: url('/retail-panels.png') center / cover no-repeat;
+  clip-path: circle(0 at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%));
+  transition: clip-path .55s cubic-bezier(.2,.75,.25,1), opacity .25s ease;
+}
+.login-retail.is-revealing .login-background-reveal {
+  opacity: .94;
+  clip-path: circle(220px at var(--login-pointer-x, 50%) var(--login-pointer-y, 50%));
+}
+.login-background-reveal::after {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  opacity: .34;
+  background: repeating-radial-gradient(circle at 50% 50%, rgba(226,255,249,.52) 0 1px, transparent 2px 15px);
+  mix-blend-mode: soft-light;
+  animation: login-water-ripple 3.8s linear infinite;
+}
+.login-retail > .login-card {
+  position: relative;
+  z-index: 3;
+  backdrop-filter: blur(9px);
+  background: rgba(255,255,255,.94);
+}
+@keyframes login-retail-pan {
+  from { transform: scale(1.05) translate3d(-1.2%, -.8%, 0); }
+  to { transform: scale(1.12) translate3d(1.2%, .8%, 0); }
+}
+@keyframes login-water-ripple {
+  from { transform: scale(.86); opacity: .12; }
+  50% { opacity: .46; }
+  to { transform: scale(1.18); opacity: .10; }
+}
+
 @media (max-width: 760px) {
   .sidebar { box-shadow: none; }
   .sidebar.open { box-shadow: 18px 0 45px rgba(0,0,0,.28); }
@@ -119,6 +183,10 @@ td { border-bottom-color: #edf3ef; }
   .panel:hover, .kpi:hover { transform: none; }
   .detail-intro h2 { font-size: 25px; }
   .notification-menu { right: -42px; }
+}
+
+@media (hover: none) {
+  .login-background-reveal { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
