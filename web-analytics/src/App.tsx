@@ -39,9 +39,81 @@ function Header({onMenu,range,setRange,refreshing}:{onMenu:()=>void;range:Range;
   </header>
 }
 function Panel({title,subtitle,children,action}:{title:string;subtitle?:string;children:React.ReactNode;action?:React.ReactNode}) { return <section className="panel"><div className="panel-heading"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>{children}</section> }
+type AnalyticsRow = Record<string, unknown>;
+function recordFilterValue(path: string, row: AnalyticsRow) {
+  if (path === '/inventory') {
+    const quantity=Number(row.quantity || 0);
+    const threshold=Number(row.low_stock_threshold || 0);
+    return quantity <= 0 ? 'Out of stock' : quantity <= threshold ? 'Low stock' : 'In stock';
+  }
+  if (path === '/customers' || path === '/suppliers') return Number(row.is_active ?? 1) === 1 ? 'Active' : 'Inactive';
+  if (path === '/operations') return String(row.recordType || 'Other');
+  return String(row.status || 'Unknown').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+function displayCell(column: string, value: unknown) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (['total_amount','subtotal','discount','amount','selling_price','buying_price','total_value','unit_price'].includes(column)) return peso.format(Number(value));
+  if (column === 'is_active') return Number(value) === 1 ? 'Active' : 'Inactive';
+  if (/(^|_)(created_at|updated_at|datetime|date|expected_delivery_date)$/.test(column)) {
+    const date=new Date(String(value).replace(' ','T'));
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+  }
+  return String(value).replace(/_/g, ' ');
+}
+function OperationalDataTable({path,title,rows,columns}:{path:string;title:string;rows:AnalyticsRow[];columns:string[]}) {
+  const [search,setSearch]=useState('');
+  const [filter,setFilter]=useState('All');
+  useEffect(()=>{setSearch('');setFilter('All');},[path]);
+  const choices=Array.from(new Set(rows.map((row)=>recordFilterValue(path,row)))).sort((a,b)=>a.localeCompare(b));
+  const normalizedSearch=search.trim().toLowerCase();
+  const filteredRows=rows.filter((row)=>{
+    const matchesFilter=filter==='All'||recordFilterValue(path,row)===filter;
+    const matchesSearch=!normalizedSearch||columns.some((column)=>String(row[column] ?? '').toLowerCase().includes(normalizedSearch));
+    return matchesFilter&&matchesSearch;
+  });
+  const filterLabel=path==='/sales'?'Sale status':path==='/inventory'?'Stock level':path==='/customers'?'Customer status':path==='/suppliers'?'Supplier status':'Operation type';
+  return <>
+    <div className="detail-intro"><h2>{title}</h2><p>Live, tenant-scoped records from Smart Monitoring Operations.</p></div>
+    <Panel title="Filtered records" subtitle="Search and filter records without changing your source data">
+      <div className="table-toolbar">
+        <label className="table-search"><span>Search records</span><input value={search} onChange={(event)=>setSearch(event.target.value)} placeholder={`Search ${title.toLowerCase()}…`} aria-label={`Search ${title.toLowerCase()} records`}/></label>
+        <label className="table-filter"><span>{filterLabel}</span><select value={filter} onChange={(event)=>setFilter(event.target.value)} aria-label={filterLabel}><option value="All">All records</option>{choices.map((choice)=><option key={choice} value={choice}>{choice}</option>)}</select></label>
+        <p className="table-count" aria-live="polite"><b>{filteredRows.length}</b> of {rows.length} records</p>
+      </div>
+      <div className="table-wrap operational-table-wrap"><table><thead><tr>{columns.map((column)=><th key={column}>{column.replace(/_/g,' ')}</th>)}</tr></thead><tbody>{filteredRows.length ? filteredRows.map((row,index)=><tr key={String(row.id || `${path}-${index}`)}>{columns.map((column)=><td key={column}>{['status','is_active'].includes(column)?<span className="status-pill">{displayCell(column,row[column])}</span>:displayCell(column,row[column])}</td>)}</tr>) : <tr><td colSpan={Math.max(columns.length,1)} className="no-results">No records match the current search and filter.</td></tr>}</tbody></table></div>
+    </Panel>
+  </>;
+}
+function formatPaymentName(name: string) {
+  const normalized = name.trim().toLowerCase().replace(/[\s_-]+/g, ' ');
+  const labels: Record<string, string> = {
+    cash: 'Cash',
+    gcash: 'GCash',
+    'online bank': 'Online bank',
+    'cash in': 'Cash-in',
+    'store damage payment': 'Store damage payment',
+  };
+  return labels[normalized] || normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+function formatChartDate(value: string, index: number, length: number) {
+  const every = Math.max(1, Math.ceil(length / 5));
+  if (index !== 0 && index !== length - 1 && index % every !== 0) return '';
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
 function OverviewPage({data}:{data:Overview}) {
   const k=data.kpis;
   const health=data.dataHealth;
+  const paymentTotal=data.payments.reduce((sum,payment)=>sum+Number(payment.value || 0),0);
+  const paymentColors=['#0d9488','#3b82f6','#f59e0b','#8b5cf6','#e35d6a','#64748b'];
+  const payments=data.payments.map((payment,index)=>({
+    ...payment,
+    color:payment.color || paymentColors[index % paymentColors.length],
+    label:formatPaymentName(payment.name),
+    amount:Number(payment.value || 0),
+    share:paymentTotal > 0 ? (Number(payment.value || 0) / paymentTotal) * 100 : 0,
+  }));
+  const maxUnits=Math.max(...data.topProducts.map((product)=>Number(product.sold || 0)),1);
   const comparisonSubtitle=`Compared with ${new Date(`${data.comparisons.previousPeriod.from}T00:00:00`).toLocaleDateString('en-PH',{month:'short',day:'numeric'})} – ${new Date(`${data.comparisons.previousPeriod.to}T00:00:00`).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}`;
   const syncText=health.lastSuccessfulSync ? new Date(String(health.lastSuccessfulSync).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}) : 'No successful Smart Monitoring sync recorded yet';
   return <>
@@ -59,6 +131,14 @@ function OverviewPage({data}:{data:Overview}) {
     </div>
     <div className="grid-main"><Panel title="Sales performance" subtitle="Net sales over selected period" action={<NavLink className="text-button" to="/sales">View report <span aria-hidden="true">→</span></NavLink>}><div className="chart"><ResponsiveContainer><AreaChart data={data.salesSeries}><defs><linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#0f766e" stopOpacity={.24}/><stop offset="95%" stopColor="#0f766e" stopOpacity={0}/></linearGradient></defs><XAxis dataKey="date" tickLine={false} axisLine={false}/><YAxis hide/><Tooltip formatter={(v)=>peso.format(Number(v))}/><Area type="monotone" dataKey="net" stroke="#0f766e" strokeWidth={2.5} fill="url(#fill)"/></AreaChart></ResponsiveContainer></div><div className="chart-summary"><span><b>{peso.format(k.netSales)}</b> net sales</span><span><b>{k.transactions}</b> transactions</span><span><b>{k.itemsSold}</b> items sold</span></div></Panel><Panel title="Payment mix" subtitle="By completed sale"><div className="payment"><ResponsiveContainer width="48%" height={205}><PieChart><Pie data={data.payments} dataKey="value" innerRadius={58} outerRadius={78} paddingAngle={4}>{data.payments.map(p=><Cell key={p.name} fill={p.color}/>)}</Pie><Tooltip formatter={(v)=>`${v}%`}/></PieChart></ResponsiveContainer><div>{data.payments.map(p=><div className="legend" key={p.name}><i style={{background:p.color}}></i><span>{p.name}</span><b>{p.value}%</b></div>)}</div></div></Panel></div>
     <div className="grid-bottom"><Panel title="Top products" subtitle="By units sold" action={<NavLink className="text-button" to="/sales">View sales <span aria-hidden="true">→</span></NavLink>}><ResponsiveContainer width="100%" height={210}><BarChart data={data.topProducts} layout="vertical" margin={{left:25}}><XAxis type="number" hide/><YAxis type="category" dataKey="name" width={135} tickLine={false} axisLine={false}/><Tooltip formatter={(v)=>`${v} units`}/><Bar dataKey="sold" fill="#0d9488" radius={[0,4,4,0]}/></BarChart></ResponsiveContainer></Panel><Panel title="Stock attention" subtitle="Products needing action" action={<NavLink className="text-button" to="/inventory">Open inventory <span aria-hidden="true">→</span></NavLink>}><div className="stock-list">{data.lowStock.map(p=><div key={p.name}><span className={p.status==='Out of stock'?'stock-dot out':'stock-dot'}></span><p><b>{p.name}</b><small>{p.quantity} on hand · threshold {p.threshold}</small></p><em className={p.status==='Out of stock'?'out':''}>{p.status}</em></div>)}</div></Panel><Panel title="Recent activity" subtitle="From Smart Monitoring sync"><div className="activity-list">{data.recentActivity.length?data.recentActivity.map(a=><div key={`${a.type}-${a.time}-${a.title}`}><span className={'activity-icon '+a.type}>{a.icon}</span><p><b>{a.title}</b><small>{new Date(String(a.time).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})}</small></p></div>):<p className="empty-activity">No synced activity in this business yet.</p>}</div></Panel></div>
+    <div className="overview-primary">
+      <Panel title="Sales performance" subtitle="Net sales across the selected period" action={<NavLink className="text-button" to="/sales">View report <span aria-hidden="true">→</span></NavLink>}>
+        <div className="chart overview-sales-chart"><ResponsiveContainer><AreaChart data={data.salesSeries} margin={{top:12,right:16,left:8,bottom:2}}><defs><linearGradient id="analytics-sales-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#0f766e" stopOpacity={.24}/><stop offset="95%" stopColor="#0f766e" stopOpacity={0}/></linearGradient></defs><XAxis dataKey="date" tickLine={false} axisLine={false} minTickGap={28} tickFormatter={(value,index)=>formatChartDate(String(value),index,data.salesSeries.length)}/><YAxis width={74} tickLine={false} axisLine={false} tickFormatter={(value)=>peso.format(Number(value)).replace('.00','')}/><Tooltip formatter={(value)=>peso.format(Number(value))} labelFormatter={(label)=>formatChartDate(String(label),0,1)}/><Area connectNulls type="monotone" dataKey="net" stroke="#0f766e" strokeWidth={2.5} fill="url(#analytics-sales-fill)"/></AreaChart></ResponsiveContainer></div>
+        <div className="chart-summary"><span><b>{peso.format(k.netSales)}</b> net sales</span><span><b>{k.transactions}</b> transactions</span><span><b>{k.itemsSold}</b> items sold</span></div>
+      </Panel>
+      <Panel title="Payment mix" subtitle="Completed-sale revenue by payment method"><div className="payment payment-improved"><ResponsiveContainer width="43%" height={205}><PieChart><Pie data={payments} dataKey="amount" innerRadius={55} outerRadius={76} paddingAngle={3}>{payments.map(p=><Cell key={p.name} fill={p.color}/>)}</Pie><Tooltip formatter={(value)=>peso.format(Number(value))}/></PieChart></ResponsiveContainer><div className="payment-legend">{payments.length?payments.map(p=><div className="legend" key={p.name}><i style={{background:p.color}}></i><span title={p.label}>{p.label}</span><div><b>{peso.format(p.amount)}</b><small>{p.share.toFixed(1)}%</small></div></div>):<p className="empty-activity">No completed payments in this period.</p>}</div></div></Panel>
+    </div>
+    <div className="overview-top-products"><Panel title="Top products" subtitle="Ranked by units sold" action={<NavLink className="text-button" to="/sales">View sales <span aria-hidden="true">→</span></NavLink>}><ol className="top-products">{data.topProducts.length?data.topProducts.slice(0,6).map((product,index)=><li key={`${product.name}-${index}`}><span className="product-rank">{index+1}</span><div className="product-detail"><div><b title={product.name}>{product.name}</b><strong>{product.sold} units</strong></div><span><i style={{width:`${(Number(product.sold || 0)/maxUnits)*100}%`}}></i></span><small>{peso.format(Number(product.revenue || 0))} sales</small></div></li>):<p className="empty-activity">No product sales in this period.</p>}</ol></Panel></div>
   </>
 }
 const details: Record<string, { description: string; metrics: [string, string][]; columns: string[]; rows: string[][] }> = {
@@ -84,9 +164,9 @@ function LiveDetailPage({path,range}:{path:string;range:Range}) {
     : path === '/suppliers' ? payload?.suppliers || []
     : path === '/operations' ? [...(payload?.attendanceEntries || []).map((item:any)=>({recordType:'Attendance',...item})), ...(payload?.inventoryMovements || []).map((item:any)=>({recordType:'Inventory movement',...item})), ...(payload?.purchaseOrders || []).map((item:any)=>({recordType:'Purchase order',...item})), ...(payload?.damageReports || []).map((item:any)=>({recordType:'Damage report',...item}))]
     : Array.isArray(payload) ? payload : [];
-  const columns = rows.length ? Object.keys(rows[0]).filter((key) => !['business_id', 'password', 'password_hash'].includes(key)) : [];
+  const columns = rows.length ? Array.from(new Set(rows.flatMap((row:any)=>Object.keys(row)))).filter((key) => !['business_id', 'password', 'password_hash'].includes(key)) : [];
   const title = path.slice(1).replace(/^./, (letter) => letter.toUpperCase());
-  return <><div className="detail-intro"><h2>{title}</h2><p>Live records for your assigned business only.</p></div><Panel title="Filtered records" subtitle="Data is loaded from Smart Monitoring Operations"><div className="table-wrap"><table><thead><tr>{columns.map((column)=><th key={column}>{column.replace(/_/g,' ')}</th>)}</tr></thead><tbody>{rows.length ? rows.map((row:any,index:number)=><tr key={row.id || index}>{columns.map((column)=><td key={column}>{String(row[column] ?? '—')}</td>)}</tr>) : <tr><td colSpan={Math.max(columns.length,1)}>No records found for this business and date range.</td></tr>}</tbody></table></div></Panel></>;
+  return <OperationalDataTable path={path} title={title} rows={rows} columns={columns}/>;
 }
 function Dashboard() {
   if (!sessionStorage.getItem('analytics_token')) return <Navigate to="/login" replace/>;
