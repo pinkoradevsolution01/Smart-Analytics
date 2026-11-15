@@ -91,7 +91,7 @@ function formatPaymentName(name: string) {
     gcash: 'GCash',
     'online bank': 'Online bank',
     'cash in': 'Cash-in',
-    'store damage payment': 'Store damage payment',
+    'store damage payment': 'Damage payment',
   };
   return labels[normalized] || normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -100,6 +100,12 @@ function formatChartDate(value: string, index: number, length: number) {
   if (index !== 0 && index !== length - 1 && index % every !== 0) return '';
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+function compactPeso(value: number) {
+  const amount=Number(value || 0);
+  if (Math.abs(amount) >= 1000000) return `₱${(amount / 1000000).toFixed(1)}M`;
+  if (Math.abs(amount) >= 1000) return `₱${(amount / 1000).toFixed(0)}k`;
+  return peso.format(amount).replace('.00','');
 }
 function OverviewPage({data}:{data:Overview}) {
   const k=data.kpis;
@@ -114,6 +120,11 @@ function OverviewPage({data}:{data:Overview}) {
     share:paymentTotal > 0 ? (Number(payment.value || 0) / paymentTotal) * 100 : 0,
   }));
   const maxUnits=Math.max(...data.topProducts.map((product)=>Number(product.sold || 0)),1);
+  const salesSeries=[...data.salesSeries].map((point)=>({
+    ...point,
+    date:String(point.date).slice(0,10),
+    net:Number(point.net || 0),
+  })).filter((point)=>Number.isFinite(point.net)).sort((left,right)=>left.date.localeCompare(right.date));
   const comparisonSubtitle=`Compared with ${new Date(`${data.comparisons.previousPeriod.from}T00:00:00`).toLocaleDateString('en-PH',{month:'short',day:'numeric'})} – ${new Date(`${data.comparisons.previousPeriod.to}T00:00:00`).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}`;
   const syncText=health.lastSuccessfulSync ? new Date(String(health.lastSuccessfulSync).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'}) : 'No successful Smart Monitoring sync recorded yet';
   return <>
@@ -133,12 +144,17 @@ function OverviewPage({data}:{data:Overview}) {
     <div className="grid-bottom"><Panel title="Top products" subtitle="By units sold" action={<NavLink className="text-button" to="/sales">View sales <span aria-hidden="true">→</span></NavLink>}><ResponsiveContainer width="100%" height={210}><BarChart data={data.topProducts} layout="vertical" margin={{left:25}}><XAxis type="number" hide/><YAxis type="category" dataKey="name" width={135} tickLine={false} axisLine={false}/><Tooltip formatter={(v)=>`${v} units`}/><Bar dataKey="sold" fill="#0d9488" radius={[0,4,4,0]}/></BarChart></ResponsiveContainer></Panel><Panel title="Stock attention" subtitle="Products needing action" action={<NavLink className="text-button" to="/inventory">Open inventory <span aria-hidden="true">→</span></NavLink>}><div className="stock-list">{data.lowStock.map(p=><div key={p.name}><span className={p.status==='Out of stock'?'stock-dot out':'stock-dot'}></span><p><b>{p.name}</b><small>{p.quantity} on hand · threshold {p.threshold}</small></p><em className={p.status==='Out of stock'?'out':''}>{p.status}</em></div>)}</div></Panel><Panel title="Recent activity" subtitle="From Smart Monitoring sync"><div className="activity-list">{data.recentActivity.length?data.recentActivity.map(a=><div key={`${a.type}-${a.time}-${a.title}`}><span className={'activity-icon '+a.type}>{a.icon}</span><p><b>{a.title}</b><small>{new Date(String(a.time).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})}</small></p></div>):<p className="empty-activity">No synced activity in this business yet.</p>}</div></Panel></div>
     <div className="overview-primary">
       <Panel title="Sales performance" subtitle="Net sales across the selected period" action={<NavLink className="text-button" to="/sales">View report <span aria-hidden="true">→</span></NavLink>}>
-        <div className="chart overview-sales-chart"><ResponsiveContainer><AreaChart data={data.salesSeries} margin={{top:12,right:16,left:8,bottom:2}}><defs><linearGradient id="analytics-sales-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#0f766e" stopOpacity={.24}/><stop offset="95%" stopColor="#0f766e" stopOpacity={0}/></linearGradient></defs><XAxis dataKey="date" tickLine={false} axisLine={false} minTickGap={28} tickFormatter={(value,index)=>formatChartDate(String(value),index,data.salesSeries.length)}/><YAxis width={74} tickLine={false} axisLine={false} tickFormatter={(value)=>peso.format(Number(value)).replace('.00','')}/><Tooltip formatter={(value)=>peso.format(Number(value))} labelFormatter={(label)=>formatChartDate(String(label),0,1)}/><Area connectNulls type="monotone" dataKey="net" stroke="#0f766e" strokeWidth={2.5} fill="url(#analytics-sales-fill)"/></AreaChart></ResponsiveContainer></div>
+        <div className="chart overview-sales-chart">{salesSeries.length?<ResponsiveContainer><AreaChart data={salesSeries} margin={{top:12,right:16,left:8,bottom:2}}><defs><linearGradient id="analytics-sales-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="5%" stopColor="#0f766e" stopOpacity={.24}/><stop offset="95%" stopColor="#0f766e" stopOpacity={0}/></linearGradient></defs><XAxis dataKey="date" tickLine={false} axisLine={false} minTickGap={28} tickFormatter={(value,index)=>formatChartDate(String(value),index,salesSeries.length)}/><YAxis width={68} tickLine={false} axisLine={false} domain={[0,'auto']} tickFormatter={(value)=>compactPeso(Number(value))}/><Tooltip formatter={(value)=>peso.format(Number(value))} labelFormatter={(label)=>formatChartDate(String(label),0,1)}/><Area connectNulls type="monotone" dataKey="net" stroke="#0f766e" strokeWidth={2.5} fill="url(#analytics-sales-fill)"/></AreaChart></ResponsiveContainer>:<p className="chart-empty">No completed sales are available in this date range.</p>}</div>
         <div className="chart-summary"><span><b>{peso.format(k.netSales)}</b> net sales</span><span><b>{k.transactions}</b> transactions</span><span><b>{k.itemsSold}</b> items sold</span></div>
       </Panel>
       <Panel title="Payment mix" subtitle="Completed-sale revenue by payment method"><div className="payment payment-improved"><ResponsiveContainer width="43%" height={205}><PieChart><Pie data={payments} dataKey="amount" innerRadius={55} outerRadius={76} paddingAngle={3}>{payments.map(p=><Cell key={p.name} fill={p.color}/>)}</Pie><Tooltip formatter={(value)=>peso.format(Number(value))}/></PieChart></ResponsiveContainer><div className="payment-legend">{payments.length?payments.map(p=><div className="legend" key={p.name}><i style={{background:p.color}}></i><span title={p.label}>{p.label}</span><div><b>{peso.format(p.amount)}</b><small>{p.share.toFixed(1)}%</small></div></div>):<p className="empty-activity">No completed payments in this period.</p>}</div></div></Panel>
     </div>
     <div className="overview-top-products"><Panel title="Top products" subtitle="Ranked by units sold" action={<NavLink className="text-button" to="/sales">View sales <span aria-hidden="true">→</span></NavLink>}><ol className="top-products">{data.topProducts.length?data.topProducts.slice(0,6).map((product,index)=><li key={`${product.name}-${index}`}><span className="product-rank">{index+1}</span><div className="product-detail"><div><b title={product.name}>{product.name}</b><strong>{product.sold} units</strong></div><span><i style={{width:`${(Number(product.sold || 0)/maxUnits)*100}%`}}></i></span><small>{peso.format(Number(product.revenue || 0))} sales</small></div></li>):<p className="empty-activity">No product sales in this period.</p>}</ol></Panel></div>
+    <div className="overview-secondary">
+      <Panel title="Top products" subtitle="Ranked by units sold" action={<NavLink className="text-button" to="/sales">View sales <span aria-hidden="true">→</span></NavLink>}><ol className="top-products">{data.topProducts.length?data.topProducts.slice(0,6).map((product,index)=><li key={`${product.name}-${index}`}><span className="product-rank">{index+1}</span><div className="product-detail"><div><b title={product.name}>{product.name}</b><strong>{product.sold} units</strong></div><span><i style={{width:`${(Number(product.sold || 0)/maxUnits)*100}%`}}></i></span><small>{peso.format(Number(product.revenue || 0))} sales</small></div></li>):<p className="empty-activity">No product sales in this period.</p>}</ol></Panel>
+      <Panel title="Stock attention" subtitle="Products needing action" action={<NavLink className="text-button" to="/inventory">Open inventory <span aria-hidden="true">→</span></NavLink>}><div className="stock-list">{data.lowStock.length?data.lowStock.map(p=><div key={p.name}><span className={p.status==='Out of stock'?'stock-dot out':'stock-dot'}></span><p><b>{p.name}</b><small>{p.quantity} on hand · threshold {p.threshold}</small></p><em className={p.status==='Out of stock'?'out':''}>{p.status}</em></div>):<p className="empty-activity">No low-stock products in this period.</p>}</div></Panel>
+      <Panel title="Recent activity" subtitle="From Smart Monitoring sync"><div className="activity-list">{data.recentActivity.length?data.recentActivity.slice(0,6).map(a=><div key={`${a.type}-${a.time}-${a.title}`}><span className={'activity-icon '+a.type}>{a.icon}</span><p><b>{a.title}</b><small>{new Date(String(a.time).replace(' ','T')).toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'})}</small></p></div>):<p className="empty-activity">No synced activity in this business yet.</p>}</div></Panel>
+    </div>
   </>
 }
 const details: Record<string, { description: string; metrics: [string, string][]; columns: string[]; rows: string[][] }> = {

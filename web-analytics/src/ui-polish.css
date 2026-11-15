@@ -253,4 +253,14 @@ td { border-bottom-color: #edf3ef; }
 .operational-table-wrap tbody tr:nth-child(even) { background: rgba(246,250,248,.7); }
 .no-results { padding: 42px 18px !important; color: #71857d !important; font-weight: 500 !important; text-align: center; }
 @media(max-width:760px) { .table-toolbar { grid-template-columns: 1fr; gap: 10px; } .table-count { margin: 1px 2px 0; } .operational-table-wrap { max-height: 54vh; } .operational-table-wrap td { max-width: 210px; } }
+
+/* Keep dashboard sections in an intentional order: performance first, then
+   product, stock, and activity context. */
+.grid-bottom, .overview-top-products { display: none; }
+.overview-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 17px; margin-top: 17px; }
+.overview-secondary .panel { min-width: 0; }
+.chart-empty { display: grid; place-items: center; height: 100%; margin: 0; color: #71857d; font-size: 12px; text-align: center; }
+.payment-improved .legend span { font-size: 11px; }
+@media(max-width:1050px) { .overview-secondary { grid-template-columns: 1fr 1fr; } .overview-secondary .panel:last-child { grid-column: span 2; } }
+@media(max-width:760px) { .overview-secondary { grid-template-columns: 1fr; } .overview-secondary .panel:last-child { grid-column: auto; } }
 .data-health{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:12px 14px;border:1px solid #cce9dc;border-radius:13px;background:linear-gradient(100deg,#effaf5,#f9fffb);color:#225546}.data-health.awaiting_sync{border-color:#f0d59d;background:linear-gradient(100deg,#fff9ea,#fffdf7);color:#765524}.health-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#d9f1e5;color:#0a725b}.awaiting_sync .health-icon{background:#fff0cc;color:#a66b00}.data-health strong{display:block;font-size:12px}.data-health p{margin:3px 0 0;font-size:11px;color:#69847b}.data-health small{margin-left:auto;font-size:10px;color:#9b6c27}.comparison-caption{margin:0 0 10px;color:#688079;font-size:11px}.kpi .neutral{color:#768883}.empty-activity{margin:13px 0;color:#7b8e88;font-size:12px}@media(max-width:760px){.data-health{align-items:flex-start}.data-health small{display:none}.comparison-caption{line-height:1.45}}
